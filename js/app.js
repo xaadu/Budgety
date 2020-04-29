@@ -33,7 +33,7 @@ var budgetController = (function () {
             inc: 0
         },
         budget: 0,
-        percentage: '--'
+        percentage: '---'
     };
 
     return {
@@ -56,6 +56,20 @@ var budgetController = (function () {
             return newItem;
         },
 
+        deleteItem: function (type, id) {
+            var ids, index;
+            
+            ids = data.allItems[type].map(function(current) {
+                return current.id;
+            });
+            
+            index = ids.indexOf(id);
+
+            if (index !== -1) {
+                data.allItems[type].splice(index, 1);
+            }
+        },
+
         calculateBudget: function () {  
             // Calculate total income and expenses
             calculateTotal('exp');
@@ -65,7 +79,7 @@ var budgetController = (function () {
             data.budget = data.totals.inc - data.totals.exp;
 
             // Calculate the percentage of income that we spent
-            if (data.totals.inc >= 0) data.percentage = Math.round(data.totals.exp / data.totals.inc * 100.0) + '%';
+            if (data.totals.inc > 0) data.percentage = Math.round(data.totals.exp / data.totals.inc * 100.0) + '%';
             else data.percentage = '---';
         },
 
@@ -101,7 +115,8 @@ var UIController = (function () {
         budgetLabel: '.budget__value',
         incomeLabel: '.budget__income--value',
         expenceslabel: '.budget__expenses--value',
-        percentageLabel: '.budget__expenses--percentage'
+        percentageLabel: '.budget__expenses--percentage',
+        container: '.container'
     };
 
     return {
@@ -117,8 +132,8 @@ var UIController = (function () {
             var html, newHTML;
 
             // Create HTML string with PlaceHolder text
-            if (type == 'inc') html = '<div class="item clearfix" id="income-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">+ %value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
-            else html = '<div class="item clearfix" id="expense-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">- %value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+            if (type == 'inc') html = '<div class="item clearfix" id="inc-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">+ %value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+            else html = '<div class="item clearfix" id="exp-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">- %value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
 
             // Replace the placeholder text with some actual data
             newHTML = html.replace('%id%', obj.id);
@@ -127,6 +142,11 @@ var UIController = (function () {
 
             // Insert the HTML into the DOM
             document.querySelector(type == 'inc' ? DOMStrings.incomeContainer : DOMStrings.expensesContainer).insertAdjacentHTML('beforeend', newHTML);
+        },
+
+        deleteListItem: function(selectorID){
+            var el = document.getElementById(selectorID);
+            el.parentNode.removeChild(el);
         },
 
         clearFields: function () { 
@@ -162,12 +182,16 @@ var controller = (function (budgetCtrl, UICtrl) {
 
     var setupEventListeners = function () {  
         var DOM = UICtrl.getDOMStrings();
+
         document.querySelector(DOM.inputBtn).addEventListener('click', ctrlAddItem);
+
         document.addEventListener('keypress', function (e) {  
             if (e.key == 'Enter' || e.keyCode == 13 || e.which == 13) { // e.keyCode == 13 also can be used
                 ctrlAddItem();
             }
         });
+
+        document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem);
     };
 
 
@@ -203,6 +227,20 @@ var controller = (function (budgetCtrl, UICtrl) {
             updateBudget();
         }
     }
+
+    var ctrlDeleteItem = function(e) {
+            var itemID = e.target.parentNode.parentNode.parentNode.parentNode.id;
+
+            if (itemID) {
+                splitID = itemID.split('-');
+                type=splitID[0];
+                ID=parseInt(splitID[1]);
+
+                budgetCtrl.deleteItem(type, ID);
+                UICtrl.deleteListItem(itemID);
+                updateBudget();
+            }
+    };
 
     return {
         init: function () {  
